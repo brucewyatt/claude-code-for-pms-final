@@ -24,6 +24,12 @@ prompt library built from your own questions.
 
 ### 1.
 
+What's contradictory or missing across the wiki pages, the handover note, and the rest of this folder?
+
 ### 2.
 
+Where should we start to address these issues and get release 4.2 back on track? Do not take any actions, just advise in an educated manner. Back up your points with evidence.
+
 ### 3.
+
+What are your concerns about this issue? Are there any pieces you believe may be more difficult than they appear to solve? What are areas or pieces of this puzzle to be careful around? Again, don't solve anything—just advise.
