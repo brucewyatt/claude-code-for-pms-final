@@ -108,7 +108,7 @@
     <div class="card cyan"><span class="tag c">THE CAUSE</span><p>A shorter ping wait made misses common. A scoring rule that never forgives turned that into silence for four responders.</p></div>
     <div class="card green"><span class="tag g">THE ANSWER</span><p>A way back in for quiet responders, and a checklist so the next brief can't skip the basics.</p></div>
   </div>
-  <p class="mute" style="margin-top:24px">Everything here is a fictional teaching scenario. Responders and handlers are R01–R16 / H1–H15 labels only, per Security Policy 4.1. Press ↓ / space, or use the bar above.</p>
+  <p class="mute" style="margin-top:24px">Everything here is a fictional teaching scenario. Responders and handlers are R01–R16 / H1–H15 labels only, per Security Policy 4.1. Use the tabs above or the ← / → keys.</p>
 </section>
 
 <!-- ============ WHAT HAPPENED ============ -->
@@ -376,7 +376,7 @@ Turn that into a skill called review-checklist, so I can point it at any brief a
         <tr><td>Named owner</td><td class="fail">No outcome owner</td></tr>
         <tr><td>How we'll know</td><td class="part">No targets or dates</td></tr>
         <tr><td>Scope matches</td><td class="part">Mockup and Availability Confidence appear only at the end</td></tr>
-        <tr><td>Problem before fix</td><td class="pass">Pass</td></tr>
+        <tr><td>Problem before fix</td><td class="pass">Pass (by elimination from the recorded 1 of 6)</td></tr>
         <tr><td>Data with source</td><td class="fail">"In the data", no table or ticket source</td></tr>
         <tr><td>Why it matters</td><td class="fail">Cost of the problem not stated</td></tr>
       </table>
@@ -393,7 +393,7 @@ Turn that into a skill called review-checklist, so I can point it at any brief a
   <p class="lede">4.2 shipped with a cut to a ping wait nobody tested alone, a weight change not in the release notes, and a roadmap item still marked Committed after it slipped. Each of those is a gap the checklist is built to catch <em>before</em> a brief goes further.</p>
   <table>
     <tr><th>What went wrong in 4.2</th><th>Check that catches it</th></tr>
-    <tr><td>"Ping timeout tuning" read as tuning, shipped as a global cut; no success measure</td><td><b>2 · How we'll know it worked</b> (metric, target, time frame)</td></tr>
+    <tr><td>"Ping timeout tuning" read as tuning, shipped as a global 90→60 s cut with no stated measure of success</td><td><b>2 · How we'll know it worked</b> (metric, target, time frame)</td></tr>
     <tr><td>Weight change and Availability Confidence drifted in and out of scope; "Committed" while unshipped</td><td><b>3 · Scope matches</b> (start vs end)</td></tr>
     <tr><td>Seasonality asserted with no numbers; "in the data" with no table</td><td><b>5 · Data point with a source</b></td></tr>
     <tr><td>Roadmap items all owned by a PM who left</td><td><b>1 · Owner</b></td></tr>
