@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rook Dispatch: a way back in (prototype)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0e0e18; --panel: #1a1a2b; --panel2: #232338; --ink: #f4f1e8; --mute: #9a9ab5;
+    --yellow: #ffd400; --red: #ff2e4d; --cyan: #19d3ff; --green: #3cf08a; --orange: #ff9f1c; --line: #000;
+    --comic: "Bangers", "Impact", "Arial Black", "Haettenschweiler", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: var(--ink); min-width: 1240px;
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    background-image: radial-gradient(rgba(255,212,0,.07) 1.5px, transparent 1.6px);
+    background-size: 14px 14px;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .comic { font-family: var(--comic); letter-spacing: 1.5px; text-transform: uppercase; }
+
+  /* ---------- top bar ---------- */
+  #topbar { display: flex; align-items: center; gap: 14px; padding: 10px 18px; background: var(--panel); border-bottom: 4px solid var(--line); box-shadow: 0 4px 0 var(--yellow); position: relative; z-index: 20; }
+  .iconbtn { background: var(--panel2); border: 3px solid var(--line); border-radius: 8px; width: 40px; height: 40px; font-size: 20px; box-shadow: 3px 3px 0 var(--line); position: relative; }
+  .iconbtn:hover { background: #2e2e4c; }
+  .logo { font-family: var(--comic); font-size: 30px; color: var(--yellow); text-shadow: 3px 3px 0 var(--red), 5px 5px 0 #000; transform: skew(-8deg); letter-spacing: 2px; }
+  .logo small { font-size: 14px; color: var(--cyan); text-shadow: 2px 2px 0 #000; margin-left: 8px; letter-spacing: 1px; }
+  .search { flex: 1; max-width: 380px; margin-left: 12px; background: #0b0b14; border: 3px solid #000; border-radius: 8px; padding: 9px 12px; color: var(--ink); font-size: 14px; box-shadow: inset 2px 2px 0 rgba(255,255,255,.05); }
+  .spacer { flex: 1; }
+  .badge { position: absolute; top: -8px; right: -8px; background: var(--red); border: 2px solid #000; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .shift { font-size: 12px; color: var(--mute); text-align: right; line-height: 1.3; }
+  .avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--cyan); color: #000; border: 3px solid #000; font-family: var(--comic); font-size: 22px; box-shadow: 3px 3px 0 var(--red); }
+  .dd { position: absolute; top: 56px; background: var(--panel2); border: 3px solid #000; border-radius: 10px; box-shadow: 5px 5px 0 var(--yellow); min-width: 230px; padding: 6px; z-index: 30; }
+  .dd .item { display: block; width: 100%; text-align: left; background: none; border: none; padding: 9px 10px; border-radius: 6px; font-size: 14px; }
+  .dd .item:hover { background: #34345a; }
+  .dd hr { border: none; border-top: 2px dashed #3a3a5c; margin: 4px 0; }
+  .dd .who { padding: 8px 10px; font-size: 13px; color: var(--mute); }
+  .dd .who b { color: var(--ink); font-size: 15px; display: block; }
+  .dd .n { padding: 9px 10px; font-size: 13px; border-bottom: 1px dashed #3a3a5c; line-height: 1.35; }
+  .dd .n:last-child { border-bottom: none; }
+  .dd .n time { color: var(--mute); font-size: 11px; display: block; }
+
+  /* ---------- layout ---------- */
+  #layout { display: flex; min-height: 640px; }
+  #side { width: 210px; background: var(--panel); border-right: 4px solid #000; padding: 14px 10px; transition: width .2s; overflow: hidden; flex-shrink: 0; }
+  #side.collapsed { width: 66px; }
+  .nav { display: flex; align-items: center; gap: 12px; width: 100%; background: none; border: 3px solid transparent; border-radius: 8px; padding: 10px; margin-bottom: 6px; text-align: left; white-space: nowrap; font-size: 15px; }
+  .nav:hover { background: var(--panel2); }
+  .nav.on { background: var(--yellow); color: #000; border-color: #000; box-shadow: 3px 3px 0 var(--red); font-weight: 700; }
+  .nav .ic { font-size: 18px; width: 22px; text-align: center; }
+  .side-foot { margin-top: 24px; font-size: 11px; color: var(--mute); white-space: nowrap; }
+  .side-foot b { color: var(--green); }
+  #main { flex: 1; padding: 22px 26px; min-width: 0; }
+  #phonecol { width: 360px; padding: 22px 18px 22px 0; flex-shrink: 0; }
+  h2.title { font-family: var(--comic); font-size: 34px; margin: 0 0 4px; letter-spacing: 2px; text-shadow: 3px 3px 0 #000; }
+  h2.title span { color: var(--yellow); }
+  .sub { color: var(--mute); font-size: 13px; margin-bottom: 16px; }
+  .h3 { font-family: var(--comic); letter-spacing: 1.5px; font-size: 14px; color: var(--cyan); text-transform: uppercase; margin: 0 0 8px; }
+
+  /* ---------- comic panels ---------- */
+  .panel { background: var(--panel); border: 4px solid #000; border-radius: 4px; box-shadow: 6px 6px 0 #000; position: relative; }
+  .panel.hero { box-shadow: 6px 6px 0 var(--red); }
+  .panel.quiet { box-shadow: 6px 6px 0 var(--orange); }
+  .panel.back { box-shadow: 6px 6px 0 var(--green); }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 22px; }
+  .card { padding: 0 0 14px; overflow: visible; }
+  .card .banner { background: linear-gradient(135deg, #2a2a4a, #1a1a2b); border-bottom: 4px solid #000; padding: 12px 14px; display: flex; gap: 12px; align-items: center; background-image: radial-gradient(rgba(255,255,255,.07) 1.5px, transparent 1.6px); background-size: 9px 9px; }
+  .mask { width: 54px; height: 54px; border-radius: 50%; border: 3px solid #000; display: flex; align-items: center; justify-content: center; font-family: var(--comic); font-size: 26px; color: #000; flex-shrink: 0; box-shadow: 3px 3px 0 #000; }
+  .card .banner h3 { margin: 0; font-family: var(--comic); font-size: 26px; letter-spacing: 1.5px; text-shadow: 2px 2px 0 #000; }
+  .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+  .tag { font-size: 10px; text-transform: uppercase; font-weight: 800; background: #000; color: var(--yellow); padding: 2px 6px; border-radius: 3px; letter-spacing: .5px; }
+  .status { margin-left: auto; font-size: 11px; font-weight: 800; padding: 3px 8px; border: 2px solid #000; border-radius: 4px; text-transform: uppercase; }
+  .st-on { background: var(--green); color: #000; }
+  .cbody { padding: 12px 14px 0; }
+  .stat { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; border-bottom: 1px dashed #36365a; }
+  .stat b { font-family: var(--comic); font-size: 18px; letter-spacing: 1px; }
+  .bar { display: flex; height: 16px; border: 3px solid #000; border-radius: 4px; overflow: hidden; margin: 12px 0 4px; background: #000; }
+  .bar i { display: block; height: 100%; transition: width .6s; }
+  .taken { background: var(--green); } .down { background: var(--orange); } .missed { background: var(--red); }
+  .legend { font-size: 11px; color: var(--mute); display: flex; gap: 12px; }
+  .legend .l1 { color: var(--green); } .legend .l2 { color: var(--orange); } .legend .l3 { color: var(--red); }
+  .rank { font-size: 12px; color: var(--mute); margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+  .rankbar { flex: 1; height: 12px; background: #000; border: 2px solid #000; border-radius: 3px; overflow: hidden; }
+  .rankbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--yellow)); transition: width .8s; }
+
+  /* speech-bubble marker */
+  .bubble { position: relative; margin: 16px 0 6px; background: #fff7d6; color: #17171f; border: 3px solid #000; border-radius: 14px; padding: 10px 12px; font-size: 13px; line-height: 1.4; box-shadow: 4px 4px 0 #000; }
+  .bubble::after { content: ""; position: absolute; top: -14px; left: 28px; border: 8px solid transparent; border-bottom: 14px solid #000; }
+  .bubble::before { content: ""; position: absolute; top: -9px; left: 31px; border: 5px solid transparent; border-bottom: 10px solid #fff7d6; z-index: 1; }
+  .bubble b { display: block; font-family: var(--comic); font-size: 19px; letter-spacing: 1px; margin-bottom: 2px; }
+  .bubble.q { background: #ffe9a8; } .bubble.q b { color: #b34700; }
+  .bubble.r { background: #cdf3ff; } .bubble.r b { color: #006c8c; }
+  .bubble.b { background: #c9ffe0; } .bubble.b b { color: #0a7a3c; }
+  .bubble.ok { background: #e4e4ef; } .bubble.ok b { color: #2d2d4a; }
+  .btn { background: var(--yellow); color: #000; border: 3px solid #000; border-radius: 8px; padding: 9px 14px; font-family: var(--comic); letter-spacing: 1.2px; font-size: 16px; box-shadow: 4px 4px 0 #000; text-transform: uppercase; }
+  .btn:hover { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 #000; }
+  .btn:active { transform: translate(3px,3px); box-shadow: 1px 1px 0 #000; }
+  .btn:disabled { background: #55557a; color: #aaa; cursor: default; transform: none; box-shadow: 2px 2px 0 #000; }
+  .btn.alt { background: var(--panel2); color: var(--ink); }
+  .btn.red { background: var(--red); color: #fff; }
+  .btn.sm { font-size: 13px; padding: 6px 10px; }
+
+  /* burst */
+  .burst { position: absolute; top: -34px; right: -22px; width: 150px; height: 120px; z-index: 12; pointer-events: none; display: flex; align-items: center; justify-content: center; font-family: var(--comic); font-size: 30px; color: #000; text-align: center; line-height: 1; transform: rotate(10deg); animation: pop .5s cubic-bezier(.2,1.6,.4,1); background: var(--yellow); clip-path: polygon(50% 0%, 61% 14%, 79% 6%, 80% 24%, 98% 28%, 88% 44%, 100% 58%, 84% 66%, 90% 86%, 70% 82%, 60% 100%, 48% 86%, 30% 98%, 27% 80%, 8% 82%, 16% 64%, 0% 50%, 16% 38%, 10% 18%, 30% 22%); }
+  .burst span { transform: rotate(-6deg); text-shadow: 2px 2px 0 #fff; }
+  @keyframes pop { from { transform: scale(.2) rotate(-30deg); opacity: 0; } to { transform: scale(1) rotate(10deg); opacity: 1; } }
+  .zzz { position: absolute; top: 8px; right: 14px; font-family: var(--comic); color: var(--cyan); font-size: 22px; text-shadow: 2px 2px 0 #000; animation: drift 2.5s ease-in-out infinite; }
+  @keyframes drift { 50% { transform: translateY(-5px); opacity: .6; } }
+
+  .hint { margin: 0 0 18px; padding: 10px 14px; background: var(--cyan); color: #000; font-weight: 700; font-size: 13px; border: 3px solid #000; box-shadow: 4px 4px 0 #000; transform: rotate(-.4deg); }
+  .hint .comic { font-size: 16px; margin-right: 6px; }
+
+  .two { display: grid; grid-template-columns: 1.3fr 1fr; gap: 22px; }
+  .feed { padding: 12px 14px; max-height: 250px; overflow: auto; }
+  .feed .ev { display: flex; gap: 10px; font-size: 13px; padding: 7px 0; border-bottom: 1px dashed #36365a; line-height: 1.35; }
+  .feed .ev time { color: var(--mute); font-size: 11px; min-width: 44px; padding-top: 1px; }
+  .feed .ev.new { color: var(--yellow); }
+  .map { height: 100%; min-height: 200px; background-color: #0b1224; background-image: linear-gradient(rgba(25,211,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(25,211,255,.12) 1px, transparent 1px); background-size: 28px 28px; position: relative; overflow: hidden; border-radius: 0; }
+  .pin { position: absolute; width: 16px; height: 16px; border-radius: 50%; border: 3px solid #000; transform: translate(-50%,-50%); }
+  .pin.gale { background: var(--green); left: 62%; top: 38%; }
+  .pin.mite { background: var(--orange); left: 34%; top: 62%; }
+  .pin.mite.on { background: var(--cyan); }
+  .pin.job { background: var(--red); left: 40%; top: 52%; border-radius: 3px; transform: translate(-50%,-50%) rotate(45deg); animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+  .maplbl { position: absolute; font-size: 10px; font-weight: 800; background: #000; color: #fff; padding: 1px 5px; border-radius: 3px; transform: translate(10px,-8px); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-family: var(--comic); letter-spacing: 1px; font-weight: 400; color: var(--cyan); font-size: 14px; padding: 10px 14px; border-bottom: 3px solid #000; }
+  td { padding: 10px 14px; border-bottom: 1px dashed #36365a; }
+  .pill { font-size: 11px; font-weight: 800; padding: 2px 8px; border: 2px solid #000; border-radius: 10px; text-transform: uppercase; color: #000; }
+  .p-taken { background: var(--green); } .p-down { background: var(--orange); } .p-missed { background: var(--red); color: #fff; } .p-wait { background: var(--cyan); }
+
+  .setrow { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px dashed #36365a; gap: 16px; }
+  .setrow small { display: block; color: var(--mute); font-size: 12px; margin-top: 2px; max-width: 420px; }
+  .sw { width: 52px; height: 28px; border-radius: 14px; background: #44445f; border: 3px solid #000; position: relative; flex-shrink: 0; padding: 0; }
+  .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid #000; transition: left .15s; }
+  .sw.on { background: var(--green); } .sw.on::after { left: 26px; }
+  select { background: var(--panel2); color: var(--ink); border: 3px solid #000; border-radius: 6px; padding: 6px 8px; font-size: 13px; }
+
+  /* ---------- phone ---------- */
+  .phoneframe { width: 330px; height: 690px; background: #000; border-radius: 42px; padding: 12px; box-shadow: 8px 8px 0 var(--red), 0 0 0 3px #333 inset; margin: 0 auto; position: relative; }
+  .pscreen { width: 100%; height: 100%; background: var(--bg); border-radius: 32px; overflow: hidden; display: flex; flex-direction: column; position: relative; background-image: radial-gradient(rgba(255,212,0,.07) 1.5px, transparent 1.6px); background-size: 12px 12px; }
+  .sbar { display: flex; justify-content: space-between; font-size: 12px; padding: 12px 22px 4px; font-weight: 700; }
+  .phead { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 4px solid #000; background: var(--panel); box-shadow: 0 3px 0 var(--yellow); }
+  .phead .iconbtn { width: 34px; height: 34px; font-size: 16px; }
+  .phead .logo { font-size: 22px; }
+  .phead .avatar { width: 34px; height: 34px; font-size: 17px; margin-left: auto; box-shadow: 2px 2px 0 var(--red); }
+  .pbody { flex: 1; overflow-y: auto; padding: 14px; }
+  .pbody::-webkit-scrollbar { display: none; }
+  .pc { background: var(--panel); border: 3px solid #000; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.4; box-shadow: 4px 4px 0 #000; position: relative; }
+  .pc h4 { margin: 0 0 4px; font-family: var(--comic); font-size: 20px; letter-spacing: 1.2px; }
+  .pc.alert { box-shadow: 4px 4px 0 var(--orange); } .pc.alert h4 { color: var(--orange); }
+  .pc.offer { box-shadow: 4px 4px 0 var(--red); animation: shake .6s 2; } .pc.offer h4 { color: var(--red); }
+  .pc.good  { box-shadow: 4px 4px 0 var(--green); } .pc.good h4 { color: var(--green); }
+  @keyframes shake { 25% { transform: translateX(-4px) rotate(-.6deg); } 75% { transform: translateX(4px) rotate(.6deg); } }
+  .pc .btn { width: 100%; margin-top: 10px; }
+  .row2 { display: flex; gap: 8px; } .row2 .btn { margin-top: 10px; }
+  .chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+  .ptabs { display: flex; border-top: 4px solid #000; background: var(--panel); }
+  .ptab { flex: 1; background: none; border: none; padding: 10px 0 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--mute); }
+  .ptab .ic { display: block; font-size: 19px; }
+  .ptab.on { color: var(--yellow); background: var(--panel2); }
+  .drawer { position: absolute; inset: 0; z-index: 10; display: flex; }
+  .drawer .sheet { width: 78%; background: var(--panel); border-right: 4px solid #000; box-shadow: 6px 0 0 var(--yellow); padding: 16px 14px; animation: slide .2s; }
+  .drawer .veil { flex: 1; background: rgba(0,0,0,.6); }
+  @keyframes slide { from { transform: translateX(-100%); } }
+  .drawer .who { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 3px dashed #36365a; }
+  .drawer .who .mask { width: 46px; height: 46px; font-size: 22px; }
+  .dnav { display: block; width: 100%; text-align: left; background: none; border: none; padding: 11px 6px; font-size: 15px; border-radius: 6px; }
+  .dnav:hover { background: var(--panel2); }
+  .pill-on { font-size: 11px; font-weight: 800; padding: 2px 8px; border: 2px solid #000; border-radius: 10px; background: var(--green); color: #000; }
+  .toast { position: absolute; left: 14px; right: 14px; bottom: 80px; background: var(--yellow); color: #000; border: 3px solid #000; border-radius: 8px; padding: 9px 12px; font-weight: 800; font-size: 13px; box-shadow: 4px 4px 0 #000; z-index: 12; animation: pop2 .25s; }
+  @keyframes pop2 { from { transform: translateY(20px); opacity: 0; } }
+  .demo { margin: 18px auto 0; width: 330px; padding: 12px; border: 3px dashed #55557a; border-radius: 8px; font-size: 12px; color: var(--mute); }
+  .demo .btn { margin: 6px 6px 0 0; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-bottom: 22px; }
+  .tile { padding: 14px 16px; background-image: radial-gradient(rgba(255,255,255,.06) 1.5px, transparent 1.6px); background-size: 9px 9px; }
+  .tile .big { font-family: var(--comic); font-size: 54px; letter-spacing: 2px; line-height: 1; color: var(--yellow); text-shadow: 3px 3px 0 #000; }
+  .dlt { font-size: 12px; color: var(--mute); margin-top: 6px; } .dlt.bad { color: var(--orange); }
+  .chart { display: flex; gap: 10px; align-items: flex-end; height: 290px; margin-top: 10px; border-bottom: 4px solid #000; }
+  .wk { flex: 1; background: none; border: none; padding: 0 0 6px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; height: 100%; }
+  .wk span { font-size: 10px; color: var(--mute); margin-top: 6px; }
+  .wk .stack { display: flex; flex-direction: column; width: 100%; border: 3px solid #000; border-bottom: none; }
+  .wk .stack i { display: block; width: 100%; }
+  .wk:hover .stack, .wk.on .stack { box-shadow: 0 0 0 3px var(--yellow); }
+  .wk.on span { color: var(--yellow); font-weight: 800; }
+  .wk em { position: absolute; top: 0; font-style: normal; font-size: 15px; color: #000; background: var(--yellow); border: 2px solid #000; padding: 1px 6px; transform: rotate(-6deg); white-space: nowrap; }
+  .foot { padding: 0 26px 24px; font-size: 12px; color: var(--mute); max-width: 1100px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div id="topbar"></div>
+<div id="layout">
+  <nav id="side"></nav>
+  <main id="main"></main>
+  <aside id="phonecol"></aside>
+</div>
+<p class="foot">Prototype for the "way back in" brief (brief.md). Every number, name and line of wording is illustrative, not real data, and nothing here is wired to anything. Try it: open the menus, then click <b>Ask Mite to confirm</b> on the console or <b>I'm ready</b> on the phone, simulate a nearby callout, and take it.</p>
+
+<script>
+  /* ---------- state ---------- */
+  var S = {
+    flow: 'quiet',          // quiet -> ready -> offered -> back
+    asked: false, rank: 12,
+    view: 'coverage', sideCollapsed: false, menu: null,   // menu: 'bell' | 'profile' | null
+    tab: 'home', drawer: false, toast: null, burst: null,
+    onDuty: true, quietHrs: true, gqAlerts: true, bellRead: false,
+    soundMite: 'Klaxon', soundGale: 'Chime',
+    feed: [{ t: '08:12', m: 'Meteor Mite: 6 days since her last ping offered.', n: false }],
+    calls: [
+      { id: 'C-2291', what: 'Flooded transit tunnel', who: 'The Gale', out: 'taken', t: 'Today 07:40' },
+      { id: 'C-2288', what: 'Rooftop standoff', who: 'The Gale', out: 'taken', t: 'Yesterday' },
+      { id: 'C-2271', what: 'Crowd surge, stadium gate', who: 'Meteor Mite', out: 'missed', t: '6 days ago' },
+      { id: 'C-2268', what: 'Chemical spill, dock 4', who: 'Meteor Mite', out: 'missed', t: '8 days ago' },
+      { id: 'C-2266', what: 'Bridge collapse risk', who: 'Meteor Mite', out: 'down', t: '9 days ago' }
+    ]
+  };
+  var $ = function (id) { return document.getElementById(id); };
+  var clock = ['08:12', '08:14', '08:15', '08:16', '08:18'];
+  function say(msg) { S.feed.unshift({ t: clock[Math.min(S.feed.length, clock.length - 1)], m: msg, n: true }); }
+  function flashBurst(txt) { S.burst = txt; setTimeout(function () { S.burst = null; render(); }, 2400); }
+  function flashToast(txt) { S.toast = txt; setTimeout(function () { S.toast = null; render(); }, 2200); }
+
+  /* ---------- top bar ---------- */
+  function renderTop() {
+    var unread = S.bellRead ? 0 : (S.gqAlerts ? 3 : 1);
+    var h = '<button class="iconbtn" data-a="side" title="Menu">&#9776;</button>' +
+      '<div class="logo">ROOK DISPATCH<small>CONSOLE</small></div>' +
+      '<input class="search" placeholder="Search responders, callouts, tags..." aria-label="Search">' +
+      '<div class="spacer"></div>' +
+      '<div class="shift">Night shift &middot; Site Aleph<br><b style="color:var(--green)">&#9679; Live</b></div>' +
+      '<button class="iconbtn" data-a="bell" title="Notifications">&#128276;' + (unread ? '<span class="badge">' + unread + '</span>' : '') + '</button>' +
+      '<button class="avatar" data-a="profile" title="Profile">K</button>';
+    if (S.menu === 'bell') {
+      h += '<div class="dd" style="right:78px;width:320px"><div class="who"><b>Notifications</b></div>' +
+        (S.gqAlerts ? '<div class="n"><b style="color:var(--orange)">Meteor Mite has gone quiet.</b> 6 days with no pings offered, 6 of her last 8 missed.<time>just now</time></div>' : '') +
+        '<div class="n">Weekly coverage report is ready.<time>2h ago</time></div>' +
+        '<div class="n">Console update: alert sounds can now differ per responder.<time>yesterday</time></div></div>';
+    }
+    if (S.menu === 'profile') {
+      h += '<div class="dd" style="right:18px"><div class="who"><b>Kip</b>Handler &middot; 2 responders</div><hr>' +
+        '<button class="item" data-a="nav:roster">&#128100; My responders</button>' +
+        '<button class="item" data-a="nav:settings">&#9881; Settings</button>' +
+        '<button class="item" data-a="noop">&#10067; Help &amp; shortcuts</button><hr>' +
+        '<button class="item" data-a="noop">&#128682; Sign out</button></div>';
+    }
+    $('topbar').innerHTML = h;
+  }
+
+  /* ---------- sidebar ---------- */
+  function renderSide() {
+    var items = [['coverage', '&#128737;', 'Coverage'], ['callouts', '&#128226;', 'Callouts'], ['roster', '&#129466;', 'Responders'], ['reports', '&#128202;', 'Reports'], ['settings', '&#9881;', 'Settings']];
+    var h = items.map(function (i) {
+      return '<button class="nav' + (S.view === i[0] ? ' on' : '') + '" data-a="nav:' + i[0] + '"><span class="ic">' + i[1] + '</span><span>' + i[2] + '</span></button>';
+    }).join('');
+    h += '<div class="side-foot">' + (S.sideCollapsed ? '' : 'Dispatch 4.2<br><b>&#9679;</b> All systems normal') + '</div>';
+    $('side').className = S.sideCollapsed ? 'collapsed' : '';
+    $('side').innerHTML = h;
+  }
+
+  /* ---------- coverage view ---------- */
+  function miteBubble() {
+    var f = S.flow;
+    if (f === 'quiet') return '<div class="bubble q"><b>Gone quiet! &middot; 6 days with no pings</b>Last 8 pings: 1 taken, 1 turned down, 6 missed. Mostly misses, so check her phone before assuming she has stepped back.</div>' +
+      '<button class="btn" data-a="ask"' + (S.asked ? ' disabled' : '') + '>' + (S.asked ? 'Asked. Waiting on Mite' : 'Ask Mite to confirm') + '</button>';
+    if (f === 'ready') return '<div class="bubble r"><b>Confirmed ready!</b>Mite tapped "I\'m ready". Waiting for a nearby callout to offer her a way back in.</div>';
+    if (f === 'offered') return '<div class="bubble r"><b>Re-entry offer sent!</b>Offered first on a nearby callout. Waiting for her answer.</div>';
+    return '<div class="bubble b"><b>Back in rotation!</b>Mite took a re-entry offer. Her rank is recovering, no ticket needed.</div>';
+  }
+  function miteCard() {
+    var back = S.flow === 'back';
+    var cls = back ? 'back' : (S.flow === 'quiet' ? 'quiet' : 'hero');
+    return '<div class="panel card ' + cls + '">' +
+      (S.burst ? '<div class="burst"><span>' + S.burst + '</span></div>' : '') +
+      (S.flow === 'quiet' ? '<div class="zzz">z Z Z</div>' : '') +
+      '<div class="banner"><div class="mask" style="background:var(--cyan)">M</div><div><h3>Meteor Mite</h3><div class="tags"><span class="tag">aquatic</span><span class="tag">crowd-mgmt</span></div></div>' +
+      '<span class="status st-on">' + (S.flow === 'quiet' ? 'Quiet' : 'Ready') + '</span></div><div class="cbody">' +
+      '<div class="stat"><span>Days since last ping offered</span><b>' + (back ? 0 : 6) + '</b></div>' +
+      '<div class="stat"><span>Taken / turned down / missed</span><b>' + (back ? '2 / 1 / 6' : '1 / 1 / 6') + '</b></div>' +
+      '<div class="bar"><i class="taken" style="width:' + (back ? 22 : 12) + '%"></i><i class="down" style="width:12%"></i><i class="missed" style="width:' + (back ? 66 : 76) + '%"></i></div>' +
+      '<div class="legend"><span class="l1">&#9632; taken</span><span class="l2">&#9632; turned down</span><span class="l3">&#9632; missed</span></div>' +
+      miteBubble() +
+      '<div class="rank">Rank<div class="rankbar"><i style="width:' + S.rank + '%"></i></div></div></div></div>';
+  }
+  function galeCard() {
+    return '<div class="panel card">' +
+      '<div class="banner"><div class="mask" style="background:var(--green)">G</div><div><h3>The Gale</h3><div class="tags"><span class="tag">flight</span><span class="tag">de-escalation</span></div></div><span class="status st-on">On call</span></div><div class="cbody">' +
+      '<div class="stat"><span>Pings offered, last 7 days</span><b>31</b></div>' +
+      '<div class="stat"><span>Taken / turned down / missed</span><b>26 / 2 / 3</b></div>' +
+      '<div class="bar"><i class="taken" style="width:84%"></i><i class="down" style="width:6%"></i><i class="missed" style="width:10%"></i></div>' +
+      '<div class="legend"><span class="l1">&#9632; taken</span><span class="l2">&#9632; turned down</span><span class="l3">&#9632; missed</span></div>' +
+      '<div class="bubble ok"><b>In rotation</b>No action needed. Busy week, though.</div>' +
+      '<div class="rank">Rank<div class="rankbar"><i style="width:88%"></i></div></div></div></div>';
+  }
+  function hintText() {
+    return {
+      quiet: S.asked ? 'Mite\'s phone now shows the check-in. Tap "I\'m ready" there.' : 'Kip now sees the quiet marker and the reason, instead of finding out from a text or a ticket.',
+      ready: 'Next: use the demo control under the phone to simulate a nearby callout.',
+      offered: 'Mite has a limited re-entry offer. Take it on her phone.',
+      back: 'The loop is closed without a support ticket.'
+    }[S.flow];
+  }
+  function renderCoverage() {
+    var mapOn = S.flow !== 'quiet';
+    return '<h2 class="title">Coverage <span>tonight</span></h2><div class="sub">Your two responders, side by side. Updated live.</div>' +
+      '<div class="hint"><span class="comic">Tip!</span>' + hintText() + '</div>' +
+      '<div class="cards">' + miteCard() + galeCard() + '</div>' +
+      '<div class="two"><div class="panel"><div style="padding:12px 14px 0"><div class="h3">Activity</div></div><div class="feed">' +
+      S.feed.map(function (e) { return '<div class="ev' + (e.n ? ' new' : '') + '"><time>' + e.t + '</time><span>' + e.m + '</span></div>'; }).join('') +
+      '<div class="ev"><time>07:40</time><span>The Gale took C-2291, flooded transit tunnel.</span></div>' +
+      '<div class="ev"><time>6d ago</time><span>C-2271 expired on Meteor Mite and moved on. It was her last ping.</span></div></div></div>' +
+      '<div class="panel" style="overflow:hidden"><div class="map"><span class="pin gale"></span><span class="maplbl" style="left:62%;top:38%">Gale</span>' +
+      '<span class="pin mite' + (mapOn ? ' on' : '') + '"></span><span class="maplbl" style="left:34%;top:62%">Mite</span>' +
+      (S.flow === 'offered' ? '<span class="pin job"></span>' : '') + '</div></div></div>';
+  }
+
+  /* ---------- other console views ---------- */
+  function renderCallouts() {
+    var rows = S.calls.map(function (c) {
+      var p = { taken: 'p-taken', down: 'p-down', missed: 'p-missed', wait: 'p-wait' }[c.out];
+      var l = { taken: 'taken', down: 'turned down', missed: 'missed', wait: 'waiting' }[c.out];
+      return '<tr><td><b>' + c.id + '</b></td><td>' + c.what + '</td><td>' + c.who + '</td><td><span class="pill ' + p + '">' + l + '</span></td><td style="color:var(--mute)">' + c.t + '</td></tr>';
+    }).join('');
+    return '<h2 class="title">Call<span>outs</span></h2><div class="sub">Recent callouts offered to your responders.</div>' +
+      '<div class="panel"><table><tr><th>ID</th><th>Incident</th><th>Responder</th><th>Outcome</th><th>When</th></tr>' + rows + '</table></div>';
+  }
+  function renderRoster() {
+    return '<h2 class="title">My <span>responders</span></h2><div class="sub">Everyone you look after.</div><div class="cards">' + miteCard().replace(/<div class="burst">.*?<\/div>/, '') + galeCard() + '</div>';
+  }
+  var WEEKS = [
+    ['29 Jun', 77, 21, 2], ['6 Jul', 76, 22, 2], ['13 Jul', 77, 20, 3], ['20 Jul', 76, 21, 3],
+    ['27 Jul', 77, 21, 2], ['3 Aug', 76, 21, 3], ['10 Aug', 70, 20, 10], ['17 Aug', 64, 18, 18], ['24 Aug', 63, 19, 18], ['31 Aug', 64, 18, 18]
+  ];
+  function renderReports() {
+    var sel = S.repWeek == null ? WEEKS.length - 1 : S.repWeek, w = WEEKS[sel];
+    var bars = WEEKS.map(function (d, i) {
+      return '<button class="wk' + (i === sel ? ' on' : '') + (i === 6 ? ' ship' : '') + '" data-a="wk:' + i + '" title="' + d[0] + '">' +
+        '<div class="stack"><i class="missed" style="height:' + d[3] * 2.4 + 'px"></i><i class="down" style="height:' + d[2] * 2.4 + 'px"></i><i class="taken" style="height:' + d[1] * 2.4 + 'px"></i></div>' +
+        '<span>' + d[0] + '</span>' + (i === 6 ? '<em class="comic">4.2 ships!</em>' : '') + '</button>';
+    }).join('');
+    return '<h2 class="title"><span>Reports</span></h2><div class="sub">Weekly pings across all responders. Click a week to read it.</div>' +
+      '<div class="tiles">' +
+      '<div class="panel tile"><div class="h3">Acceptance</div><div class="big">64%</div><div class="dlt bad">&#9660; from 77% before 4.2</div></div>' +
+      '<div class="panel tile"><div class="h3">Missed pings</div><div class="big" style="color:var(--red)">18%</div><div class="dlt bad">&#9650; from 2% before 4.2</div></div>' +
+      '<div class="panel tile"><div class="h3">Gone quiet now</div><div class="big" style="color:var(--orange)">1 of 2</div><div class="dlt">your responders</div></div></div>' +
+      '<div class="panel" style="padding:16px 18px"><div class="h3">Where every ping went, by week</div>' +
+      '<div class="chart">' + bars + '</div>' +
+      '<div class="legend" style="margin-top:6px"><span class="l1">&#9632; taken</span><span class="l2">&#9632; turned down</span><span class="l3">&#9632; missed</span></div>' +
+      '<div class="bubble ok" style="margin-top:20px"><b>Week of ' + w[0] + '</b>' + w[1] + '% taken, ' + w[2] + '% turned down, ' + w[3] + '% missed.' +
+      (sel >= 6 ? ' Missed pings jumped at the 4.2 release, while willingness to take answered pings held steady.' : ' Before 4.2, missed pings were rare.') + '</div></div>';
+  }
+  function sw(key, on) { return '<button class="sw' + (on ? ' on' : '') + '" data-a="sw:' + key + '" aria-label="toggle"></button>'; }
+  function sel(key, val) {
+    return '<select data-sel="' + key + '">' + ['Klaxon', 'Chime', 'Bing', 'Siren'].map(function (o) { return '<option' + (o === val ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>';
+  }
+  function renderSettings() {
+    return '<h2 class="title"><span>Settings</span></h2><div class="sub">Console preferences for Kip.</div><div class="panel">' +
+      '<div class="setrow"><div><b>Gone-quiet alerts</b><small>Tell me when a responder has had no pings for several days, and why.</small></div>' + sw('gq', S.gqAlerts) + '</div>' +
+      '<div class="setrow"><div><b>Alert sound: Meteor Mite</b><small>So the two responders no longer both go "bing".</small></div>' + sel('mite', S.soundMite) + '</div>' +
+      '<div class="setrow"><div><b>Alert sound: The Gale</b><small></small></div>' + sel('gale', S.soundGale) + '</div>' +
+      '<div class="setrow"><div><b>Theme</b><small>Dark mode, because it is 11pm.</small></div><span class="pill p-taken">Dark</span></div>' +
+      '</div>';
+  }
+  function renderMain() {
+    var v = S.view;
+    $('main').innerHTML = v === 'coverage' ? renderCoverage() : v === 'callouts' ? renderCallouts() : v === 'roster' ? renderRoster() : v === 'reports' ? renderReports() : renderSettings();
+  }
+
+  /* ---------- phone ---------- */
+  function phoneHome() {
+    var f = S.flow, body = '';
+    if (f === 'quiet') {
+      body = '<div class="pc alert"><h4>' + (S.asked ? 'Kip asks: are you ready?' : 'Quiet lately') + '</h4>You haven\'t been offered a callout in 6 days. That\'s not because you were forgotten. Are you ready for one?<button class="btn" data-a="ready">I\'m ready!</button></div>' +
+        '<div class="pc" style="font-size:12px;color:var(--mute)">6 recent pings expired before you answered. If your phone didn\'t buzz, tell Kip, or send yourself a test ping from the Me tab.</div>';
+    } else if (f === 'ready') {
+      body = '<div class="pc good"><h4>You\'re set!</h4>We\'ll offer you the next callout near you. You can still turn it down.</div>';
+    } else if (f === 'offered') {
+      body = '<div class="pc offer"><h4>Callout near you!</h4>Structural collapse, 8 min away. You are offered first.<div class="row2"><button class="btn red" data-a="take">Take it</button><button class="btn alt" data-a="decline">Turn down</button></div></div>';
+    } else {
+      body = '<div class="pc good"><h4>Back in line!</h4>Thanks for taking that one. You\'ll be offered callouts near you again.</div>';
+    }
+    return '<div class="pc"><div style="display:flex;justify-content:space-between;align-items:center"><div><h4 style="margin:0">On duty</h4><span style="color:var(--mute);font-size:12px">Offer me callouts</span></div>' + sw('duty', S.onDuty) + '</div></div>' + body +
+      '<div class="pc"><h4 style="font-size:16px">Your recent pings</h4><div class="stat"><span>Pings offered</span><b>' + (S.flow === 'back' ? 9 : 8) + '</b></div><div class="stat"><span>Taken</span><b>' + (S.flow === 'back' ? 2 : 1) + '</b></div><div class="stat"><span>Missed</span><b>6</b></div></div>';
+  }
+  function phoneCalls() {
+    return '<div class="pc"><h4>Recent pings</h4>' + S.calls.filter(function (c) { return c.who === 'Meteor Mite'; }).map(function (c) {
+      var p = { taken: 'p-taken', down: 'p-down', missed: 'p-missed', wait: 'p-wait' }[c.out];
+      var l = { taken: 'taken', down: 'turned down', missed: 'missed', wait: 'waiting' }[c.out];
+      return '<div class="stat"><span>' + c.what + '<br><small style="color:var(--mute)">' + c.t + '</small></span><span class="pill ' + p + '">' + l + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function phoneMe() {
+    return '<div class="pc" style="text-align:center"><div class="mask" style="background:var(--cyan);margin:0 auto 8px;width:70px;height:70px;font-size:36px">M</div><h4 style="margin:0">Meteor Mite</h4><span style="color:var(--mute);font-size:12px">Handler: Kip</span>' +
+      '<div class="chips" style="justify-content:center"><span class="tag">aquatic</span><span class="tag">crowd-management</span></div></div>' +
+      '<div class="pc"><h4 style="font-size:16px">Settings</h4>' +
+      '<div class="stat"><span>Quiet hours</span>' + sw('qh', S.quietHrs) + '</div>' +
+      '<div class="stat"><span>Ping sound</span><b style="font-size:14px">Klaxon</b></div>' +
+      '<button class="btn alt sm" data-a="testpush" style="margin-top:10px;width:100%">Send myself a test ping</button></div>';
+  }
+  function renderPhone() {
+    var title = { home: 'Home', calls: 'Pings', me: 'Me' }[S.tab];
+    var body = S.tab === 'home' ? phoneHome() : S.tab === 'calls' ? phoneCalls() : phoneMe();
+    var drawer = S.drawer ? '<div class="drawer"><div class="sheet"><div class="who"><div class="mask" style="background:var(--cyan)">M</div><div><b>Meteor Mite</b><br><span class="pill-on">On duty</span></div></div>' +
+      '<button class="dnav" data-a="tab:home">&#127968; Home</button><button class="dnav" data-a="tab:calls">&#128226; Pings</button><button class="dnav" data-a="tab:me">&#128100; Profile</button>' +
+      '<button class="dnav" data-a="tab:me">&#9881; Settings</button><button class="dnav" data-a="noop">&#10067; Help</button></div><div class="veil" data-a="drawer"></div></div>' : '';
+    var tabs = [['home', '&#127968;', 'Home'], ['calls', '&#128226;', 'Pings'], ['me', '&#128100;', 'Me']].map(function (t) {
+      return '<button class="ptab' + (S.tab === t[0] ? ' on' : '') + '" data-a="tab:' + t[0] + '"><span class="ic">' + t[1] + '</span>' + t[2] + '</button>';
+    }).join('');
+    $('phonecol').innerHTML = '<div class="h3" style="text-align:center">Meteor Mite\'s phone</div><div class="phoneframe"><div class="pscreen">' +
+      '<div class="sbar"><span>9:41</span><span>&#9679;&#9679;&#9679; 5G 82%</span></div>' +
+      '<div class="phead"><button class="iconbtn" data-a="drawer">&#9776;</button><div class="logo">ROOK</div><button class="avatar" data-a="tab:me">M</button></div>' +
+      '<div class="pbody"><div class="comic" style="font-size:22px;margin-bottom:10px;color:var(--yellow);text-shadow:2px 2px 0 #000">' + title + '</div>' + body + '</div>' +
+      '<div class="ptabs">' + tabs + '</div>' + drawer + (S.toast ? '<div class="toast">' + S.toast + '</div>' : '') + '</div></div>' +
+      '<div class="demo">Demo controls (not part of the product):<br><button class="btn sm" data-a="nearby">Simulate a nearby callout</button><button class="btn sm alt" data-a="reset">Reset</button></div>';
+  }
+
+  function render() { renderTop(); renderSide(); renderMain(); renderPhone(); }
+
+  /* ---------- actions ---------- */
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-a]');
+    if (!t) { if (S.menu) { S.menu = null; render(); } return; }
+    var a = t.getAttribute('data-a'), arg = a.indexOf(':') > -1 ? a.split(':')[1] : null;
+    a = a.split(':')[0];
+    var keepMenu = (a === 'bell' || a === 'profile');
+    if (!keepMenu) S.menu = null;
+    if (a === 'side') S.sideCollapsed = !S.sideCollapsed;
+    else if (a === 'bell') { S.menu = S.menu === 'bell' ? null : 'bell'; S.bellRead = true; }
+    else if (a === 'profile') S.menu = S.menu === 'profile' ? null : 'profile';
+    else if (a === 'nav') S.view = arg;
+    else if (a === 'wk') S.repWeek = +arg;
+    else if (a === 'tab') { S.tab = arg; S.drawer = false; }
+    else if (a === 'drawer') S.drawer = !S.drawer;
+    else if (a === 'ask') { S.asked = true; S.bellRead = false; say('Kip asked Meteor Mite to confirm she is ready.'); }
+    else if (a === 'ready') { S.flow = 'ready'; S.tab = 'home'; say('Meteor Mite confirmed she is ready.'); flashBurst('READY!'); }
+    else if (a === 'nearby') {
+      if (S.flow === 'ready') { S.flow = 'offered'; S.tab = 'home'; S.calls.unshift({ id: 'C-2292', what: 'Structural collapse, 8 min away', who: 'Meteor Mite', out: 'wait', t: 'Now' }); say('Re-entry offer sent to Meteor Mite on C-2292.'); flashBurst('INCOMING!'); }
+      else if (S.flow === 'quiet') flashToast('Mite needs to confirm she\'s ready first.');
+    }
+    else if (a === 'take') { S.flow = 'back'; S.rank = 40; S.calls[0].out = 'taken'; say('Meteor Mite took C-2292. Back in rotation.'); flashBurst('POW!'); }
+    else if (a === 'decline') { S.flow = 'ready'; S.calls[0].out = 'down'; say('Meteor Mite turned down C-2292. Still ready for the next one.'); }
+    else if (a === 'testpush') flashToast('Test ping delivered to this phone in 1.2s.');
+    else if (a === 'sw') {
+      var map = { gq: 'gqAlerts', duty: 'onDuty', qh: 'quietHrs' };
+      S[map[arg]] = !S[map[arg]];
+    }
+    else if (a === 'reset') { S.flow = 'quiet'; S.asked = false; S.rank = 12; S.burst = null; S.tab = 'home'; S.view = 'coverage'; S.bellRead = false; S.calls = S.calls.filter(function (c) { return c.id !== 'C-2292'; }); S.feed = [{ t: '08:12', m: 'Meteor Mite: 6 days since her last ping offered.', n: false }]; }
+    render();
+  });
+  document.addEventListener('change', function (e) {
+    var k = e.target.getAttribute('data-sel');
+    if (k === 'mite') S.soundMite = e.target.value;
+    if (k === 'gale') S.soundGale = e.target.value;
+  });
+  render();
+</script>
+</body>
+</html>
