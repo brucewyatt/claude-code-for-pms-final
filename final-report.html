@@ -11,7 +11,7 @@
     --comic: "Bangers", "Impact", "Arial Black", "Haettenschweiler", sans-serif;
   }
   * { box-sizing: border-box; }
-  html { scroll-snap-type: y proximity; scroll-behavior: smooth; }
+  
   body {
     margin: 0; color: var(--ink);
     font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.5;
@@ -20,7 +20,7 @@
     background-size: 14px 14px;
   }
   .comic { font-family: var(--comic); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 400; }
-  section { min-height: 100vh; padding: 70px 6vw 60px; scroll-snap-align: start; display: flex; flex-direction: column; justify-content: center; max-width: 1280px; margin: 0 auto; }
+  section { min-height: 100vh; padding: 90px 6vw 60px; display: none; animation: pop .25s ease-out; flex-direction: column; justify-content: center; max-width: 1280px; margin: 0 auto; }
   h1, h2, h3 { margin: 0; font-weight: 400; }
   h1 { font-family: var(--comic); font-size: clamp(54px, 9vw, 120px); line-height: .95; color: var(--yellow); text-shadow: 4px 4px 0 var(--red), 8px 8px 0 #000; transform: skew(-6deg); letter-spacing: 3px; text-transform: uppercase; }
   h2 { font-family: var(--comic); font-size: clamp(34px, 5vw, 58px); color: var(--yellow); text-shadow: 3px 3px 0 var(--red), 5px 5px 0 #000; letter-spacing: 2px; text-transform: uppercase; transform: skew(-4deg); margin-bottom: 8px; }
@@ -50,9 +50,21 @@
   .pass { color: var(--green); font-weight: 700; } .fail { color: var(--red); font-weight: 700; } .part { color: var(--orange); font-weight: 700; }
   .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: var(--panel); border-bottom: 4px solid #000; box-shadow: 0 4px 0 var(--yellow); display: flex; align-items: center; gap: 4px; padding: 8px 16px; overflow-x: auto; }
   .nav .logo { font-family: var(--comic); color: var(--yellow); font-size: 22px; text-shadow: 2px 2px 0 var(--red); margin-right: 14px; white-space: nowrap; transform: skew(-8deg); }
+  @keyframes pop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  section.active { display: flex; }
+  .nav button { font: inherit; border: 2px solid transparent; background: none; cursor: pointer; }
+  .nav button { color: var(--mute); font-size: 13px; padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
   .nav a { color: var(--mute); text-decoration: none; font-size: 13px; padding: 4px 9px; border-radius: 6px; white-space: nowrap; }
+  .nav button:hover, .nav button.on { background: var(--panel2); color: var(--yellow); border-color: #000; box-shadow: 2px 2px 0 var(--yellow); }
   .nav a:hover, .nav a.on { background: var(--panel2); color: var(--yellow); }
   .bar { position: fixed; top: 50px; left: 0; height: 4px; background: var(--red); z-index: 60; width: 0; }
+  .steps { display: flex; gap: 0; margin: 6px 0 20px; flex-wrap: wrap; }
+  .step { flex: 1; min-width: 120px; background: var(--panel2); border: 3px solid #000; padding: 10px 8px; text-align: center; cursor: pointer; color: var(--mute); font: inherit; position: relative; }
+  .step b { display: block; font-family: var(--comic); font-size: 28px; color: var(--ink); letter-spacing: 1.5px; font-weight: 400; }
+  .step.on { background: var(--yellow); color: #000; box-shadow: 4px 4px 0 var(--red); z-index: 1; } .step.on b { color: #000; }
+  .step.done:not(.on) { border-bottom: 6px solid var(--green); }
+  .out { background: #10101e; border: 3px solid #000; border-left: 8px solid var(--green); border-radius: 8px; padding: 12px 16px; margin: 8px 0; }
+  .out::before { content: "OUTPUT"; display: block; font-family: var(--comic); letter-spacing: 2px; color: var(--green); font-size: 15px; margin-bottom: 4px; }
   .timeline { display: flex; gap: 0; margin: 10px 0 20px; flex-wrap: wrap; }
   .tl { flex: 1; min-width: 190px; background: var(--panel2); border: 3px solid #000; padding: 12px 14px; }
   .tl.bad { background: #3a1626; }
@@ -83,10 +95,7 @@
 </head>
 <body>
 
-<div class="nav">
-  <span class="logo">ROOK · 4.2</span>
-  <a href="#top">Title</a><a href="#what">What happened</a><a href="#m1">1 Origin</a><a href="#m2">2 Hearing</a><a href="#m3">3 Rewind</a><a href="#m4">4 X-Ray</a><a href="#m5">5 Speed</a><a href="#fix">The fix</a><a href="#m6">6 Sidekicks</a><a href="#guard">The guardrail</a><a href="#cover">Coverage</a>
-</div>
+<div class="nav" id="nav"><span class="logo">ROOK · 4.2</span></div>
 <div class="bar" id="bar"></div>
 
 <!-- ============ TITLE ============ -->
@@ -103,6 +112,14 @@
 </section>
 
 <!-- ============ WHAT HAPPENED ============ -->
+<section id="timeline">
+  <div class="kicker">MY WORKSHOP, STEP BY STEP</div>
+  <h2>Timeline</h2>
+  <p class="lede">Click a step to see what I did, the best prompt from that session (verbatim), and what it produced.</p>
+  <div class="steps" id="steps"></div>
+  <div class="card cyan" id="stepbody"></div>
+</section>
+
 <section id="what">
   <div class="kicker">THE SHORT VERSION</div>
   <h2>What happened with 4.2</h2>
@@ -418,24 +435,38 @@ Turn that into a skill called review-checklist, so I can point it at any brief a
 <footer>Rook Industries is a fictional teaching scenario · Product School, Claude Code for PMs, cohort ccpm-2026.1 · Prompts quoted verbatim from each module's prompts.md</footer>
 
 <script>
-  // progress bar + nav highlight
-  const bar = document.getElementById('bar');
-  const links = [...document.querySelectorAll('.nav a')];
-  const secs = links.map(a => document.querySelector(a.getAttribute('href')));
-  function onScroll() {
-    const h = document.documentElement;
-    bar.style.width = (h.scrollTop / (h.scrollHeight - h.clientHeight) * 100) + '%';
-    let cur = 0; secs.forEach((s, i) => { if (s.getBoundingClientRect().top < innerHeight * 0.4) cur = i; });
-    links.forEach((a, i) => a.classList.toggle('on', i === cur));
+  const TL = [{"n": "1", "mod": "Origin Story", "what": "Read everything, find the gaps", "pn": "1.1", "prompt": "What's contradictory or missing across the wiki pages, the handover note, and the rest of this folder?", "out": "Availability Confidence is marked Committed for 4.2 but isn't in the release notes. \"Ping timeout tuning\" shipped as a global 90 to 60 s cut. Two shipped briefs still read as unbuilt. The seasonality explanation had no numbers behind it, so it stayed a claim to verify.", "src": "01-origin-story/prompts.md"}, {"n": "2", "mod": "Super Hearing", "what": "Compare interviews with tickets", "pn": "2.13", "prompt": "Now I want to fine tune my hypothesis from before. Please help me refine what exactly the problem is based on interviews and tickets.", "out": "Refined hypothesis (inference): \"gone before I could answer\" is wide and starts 12 Aug, matching the 60 s wait. \"Phone never goes off\" starts 17 Aug and hits a subset, which looks like a delayed ranking loop. 107 of 147 tickets came after 12 Aug.", "src": "02-super-hearing/prompts.md"}, {"n": "3", "mod": "Rewind", "what": "Let the data separate the groups", "pn": "3.1", "prompt": "Did this happen to everyone, or did it happen to some people much more than others? More specifically, looking at it as a time series\u2014did individuals see more misses after they missed at least one? Did that rate increase as time went on?", "out": "Twelve responders moved together; four of 16 went quiet (pings down about 70%, 53-64% of the rest missed). Missed pings stepped from 2.3% to 18.0% on 12 Aug. The take rate on answered pings stayed flat (78.4% vs 78.0%), so willingness didn't change.", "src": "03-rewind/prompts.md"}, {"n": "4", "mod": "X-Ray Vision", "what": "Find the mechanism in the code", "pn": "4.12", "prompt": "What's missing from the code that subtracts and adds points? Say somebody has been quiet for an extended period of time, how do they get their score up? Is it realistically possible?", "out": "Nothing but a taken ping raises a score (+0.08); a miss costs 0.12, same as a decline; decay was never built; the floor is 0. A quiet responder would need about 11 takes in a row, and is rarely pinged. Realistically, no.", "src": "04-x-ray-vision/prompts.md"}, {"n": "5", "mod": "Super Speed", "what": "Turn the finding into something clickable", "pn": "5.6", "prompt": "Take the brief you just wrote and build me a working prototype, an actual screen I can click through, not a description of one. Build it as a single file I can just open in my browser. Show me where this would actually happen, and make at least one thing on it respond when I click it.", "out": "05-super-speed/prototype.html: a single-file console and phone app with a \"gone quiet\" marker, an \"I'm ready\" tap, limited re-entry offers and a Reports chart. Paired with brief.md (who it's for, what changes, what it does not do).", "src": "05-super-speed/prompts.md"}, {"n": "6", "mod": "Sidekicks", "what": "Make the habit repeatable", "pn": "6.1", "prompt": "I want to save a habit as something I can reuse. When I review a brief before it goes any further, here's what I actually check for: [six checks: owner, how we'll know it worked, scope matches, problem before fix, data point with source, why it matters]. Turn that into a skill called review-checklist, so I can point it at any brief and get the same check every time, without me explaining it again.", "out": "The review-checklist skill (Pass / Partial / Fail table per check). First run on brief.md: Ready with fixes, 1 of 6 pass. Then scheduled as monday-review-checklist. (Prompt shortened here; the full text is in the Module 6 slide.)", "src": "06-sidekicks/prompts.md"}];
+  const esc = t => t.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const secs = [...document.querySelectorAll('section')];
+  const titles = {top:'Title',timeline:'Timeline',what:'What happened',m1:'1 Origin',m2:'2 Hearing',m3:'3 Rewind',m4:'4 X-Ray',m5:'5 Speed',fix:'The fix',m6:'6 Sidekicks',guard:'The guardrail',cover:'Coverage'};
+  const nav = document.getElementById('nav'), bar = document.getElementById('bar');
+  const order = ['top','timeline','what','m1','m2','m3','m4','m5','fix','m6','guard','cover'];
+  secs.sort((x,y)=>order.indexOf(x.id)-order.indexOf(y.id));
+  secs.forEach(sec => { const b = document.createElement('button'); b.textContent = titles[sec.id]||sec.id; b.dataset.id = sec.id; b.onclick = () => show(sec.id); nav.appendChild(b); });
+  function show(id) {
+    const i = Math.max(0, secs.findIndex(x => x.id === id));
+    secs.forEach((x,j) => x.classList.toggle('active', j === i));
+    [...nav.querySelectorAll('button')].forEach((b,j) => b.classList.toggle('on', j === i));
+    bar.style.width = ((i+1)/secs.length*100) + '%';
+    history.replaceState(null,'','#'+secs[i].id); scrollTo(0,0);
+    nav.querySelectorAll('button')[i].scrollIntoView({inline:'center',block:'nearest'});
   }
-  addEventListener('scroll', onScroll); onScroll();
-  // arrow-key slide navigation
+  const cur = () => Math.max(0, secs.findIndex(x => x.classList.contains('active')));
   addEventListener('keydown', e => {
-    if (!['ArrowRight','ArrowLeft','PageDown','PageUp'].includes(e.key)) return;
-    let cur = 0; secs.forEach((s, i) => { if (s.getBoundingClientRect().top < innerHeight * 0.5) cur = i; });
-    const next = Math.max(0, Math.min(secs.length - 1, cur + (['ArrowRight','PageDown'].includes(e.key) ? 1 : -1)));
-    secs[next].scrollIntoView(); e.preventDefault();
+    if (e.key==='ArrowRight'||e.key==='PageDown') show(secs[Math.min(secs.length-1,cur()+1)].id);
+    if (e.key==='ArrowLeft'||e.key==='PageUp') show(secs[Math.max(0,cur()-1)].id);
   });
+  // timeline stepper
+  const stepsEl = document.getElementById('steps'), body = document.getElementById('stepbody');
+  function showStep(k) {
+    [...stepsEl.children].forEach((c,j) => { c.classList.toggle('on', j===k); c.classList.toggle('done', j<k); });
+    const t = TL[k];
+    body.innerHTML = '<h3>Step '+t.n+' · '+t.mod+'</h3><p><b>What I did:</b> '+t.what+'</p><div class="prompt" data-n="'+t.pn+'">'+esc(t.prompt)+'</div><div class="out">'+esc(t.out)+'</div><p class="src"><b>Source:</b> '+t.src+'; CLAUDE.md</p>'
+      + '<button class="btn" onclick="'+(k<TL.length-1?'showStep('+(k+1)+')':'show(\'what\')')+'">'+(k<TL.length-1?'Next step →':'See what happened →')+'</button>';
+  }
+  TL.forEach((t,k) => { const b = document.createElement('button'); b.className='step'; b.innerHTML='<b>'+t.n+'</b>'+t.mod; b.onclick=()=>showStep(k); stepsEl.appendChild(b); });
+  showStep(0);
+  show((location.hash||'#top').slice(1));
   // prototype interactions
   const $ = id => document.getElementById(id);
   $('readyBtn').onclick = () => {
